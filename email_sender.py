@@ -2,6 +2,7 @@ import json
 import os
 import boto3
 
+from botocore import exceptions
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -22,6 +23,7 @@ ses = boto3.client("ses",
 
 
 def get_message():
+
     response = sqs.receive_message(
         QueueUrl=queue,
         MaxNumberOfMessages=1,
@@ -36,11 +38,16 @@ def get_message():
     message = response["Messages"][0]
     receipt_handle = message["ReceiptHandle"]
 
+    try:
+        send_email(message)
+    except exceptions.ClientError as ex:
+        print(ex)
+        return
+
     sqs.delete_message(
         QueueUrl=queue,
         ReceiptHandle=receipt_handle
     )
-    send_email(message)
 
 def send_email(message):
     print("Sending...")
