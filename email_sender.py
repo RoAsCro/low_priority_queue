@@ -43,14 +43,20 @@ def get_message():
     send_email(message)
 
 def send_email(message):
-    print(message)
+    print("Sending...")
     message_json = json.loads(message["Body"])
+    priority = message_json['priority'].capitalize()
     ses.send_email(Source=email,
                    Destination={"ToAddresses": [email]},
                    Message={"Subject":
-                                {"Data": f"{message_json['priority']} priority - {message_json['title']}"},
+                                {"Data": f"{priority} priority - {message_json['title']}"},
                             "Body":
-                                {"Text": {"Data": message_json['message']}}})
+                                {"Text":
+                                     {"Data": f"{message_json['message']}\n"
+                                              f"(Message sent automatically via bug queue)"}
+                                 }
+                            })
 
-while True:
-    get_message();
+if __name__ == "__main__":
+    while True:
+        get_message();
