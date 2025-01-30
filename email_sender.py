@@ -74,7 +74,7 @@ def run():
             except exceptions.ClientError as ex:
                 print(ex)
                 continue
-        delete(message)
+            delete(message)
 
 if __name__ == "__main__":
     run()
