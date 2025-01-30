@@ -21,8 +21,9 @@ ses = boto3.client("ses",
                    aws_access_key_id=access_id,
                    aws_secret_access_key=access_key)
 
+running = False
 
-def get_message():
+def get_from_queue():
 
     response = sqs.receive_message(
         QueueUrl=queue,
@@ -33,21 +34,10 @@ def get_message():
     )
 
     if "Messages" not in response:
-        return
+        return None
 
     message = response["Messages"][0]
-    receipt_handle = message["ReceiptHandle"]
-
-    try:
-        send_email(message)
-    except exceptions.ClientError as ex:
-        print(ex)
-        return
-
-    sqs.delete_message(
-        QueueUrl=queue,
-        ReceiptHandle=receipt_handle
-    )
+    return message
 
 def send_email(message):
     print("Sending...")
@@ -64,6 +54,27 @@ def send_email(message):
                                  }
                             })
 
+
+def delete(message):
+    receipt_handle = message["ReceiptHandle"]
+    sqs.delete_message(
+        QueueUrl=queue,
+        ReceiptHandle=receipt_handle
+    )
+
+
+def run():
+    global running
+    running = True
+    while running:
+        message = get_from_queue()
+        if message:
+            try:
+                send_email(message)
+            except exceptions.ClientError as ex:
+                print(ex)
+                continue
+        delete(message)
+
 if __name__ == "__main__":
-    while True:
-        get_message();
+    run()
