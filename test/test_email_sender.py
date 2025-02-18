@@ -4,7 +4,7 @@ import time
 import boto3
 import pytest
 
-import email_sender
+from emails import email_sender
 
 from moto import mock_aws
 
