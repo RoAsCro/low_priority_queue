@@ -21,12 +21,12 @@ ses = boto3.client("ses",
                    aws_access_key_id=consumer.access_id,
                    aws_secret_access_key=consumer.access_key)
 exception = exceptions.ClientError
-def send(self, message_to_send):
+def send(message_to_send):
     print("Sending...")
     message_json = json.loads(message_to_send["Body"])
     priority = message_json['priority'].capitalize()
-    self.ses.send_email(Source=self.email,
-                   Destination={"ToAddresses": [self.email]},
+    ses.send_email(Source=email,
+                   Destination={"ToAddresses": [email]},
                    Message={"Subject":
                                 {"Data": f"{priority} priority - {message_json['title']}"},
                             "Body":
