@@ -16,12 +16,15 @@ load_dotenv()
 
 email = os.getenv("EMAIL")
 aws_region = os.getenv("AWS_REGION")
-ses = boto3.client("ses",
-                   region_name=aws_region,
-                   aws_access_key_id=consumer.access_id,
-                   aws_secret_access_key=consumer.access_key)
+ses = None
 exception = exceptions.ClientError
 def send(message_to_send):
+    global ses
+    if ses is None:
+        ses = boto3.client("ses",
+                     region_name=aws_region,
+                     aws_access_key_id=consumer.access_id,
+                     aws_secret_access_key=consumer.access_key)
     print("Sending...")
     message_json = json.loads(message_to_send["Body"])
     priority = message_json['priority'].capitalize()
