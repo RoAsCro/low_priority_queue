@@ -22,7 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest
           pip install moto
-          pip install -r ./teams/requirements.txt
+          pip install -r ./emails/requirements.txt
 
       - name: Run pytest
         run: |

@@ -27,7 +27,7 @@ jobs:
       - name: Build, tag, and push the image to Amazon ECR
         id: build-image
         env:
-          IMAGE_TAG: queue_1
+          IMAGE_TAG: queue_3
         run: |
           docker build -t ${{ secrets.REPO_URL }}:$IMAGE_TAG .
           docker push ${{ secrets.REPO_URL }}:$IMAGE_TAG
