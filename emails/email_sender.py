@@ -1,6 +1,6 @@
 import json
 import os
-from venv import logger
+from logging import getLogger
 
 import boto3
 
@@ -18,6 +18,9 @@ email = os.getenv("EMAIL")
 aws_region = os.getenv("AWS_REGION")
 ses = None
 exception = exceptions.ClientError
+
+logger = getLogger()
+
 def send(message_to_send):
     global ses
     if ses is None:
