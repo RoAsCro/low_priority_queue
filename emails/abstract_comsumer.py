@@ -1,11 +1,10 @@
 import os
 import threading
-from abc import ABC, abstractmethod
 from venv import logger
 
 import boto3
 from dotenv import load_dotenv
-from flask import Flask, Blueprint
+from flask import Blueprint
 
 load_dotenv()
 # Environment variables
@@ -75,17 +74,3 @@ def background_thread():
 @router.get("/health")
 def health_check():
     return 'Ok', 200
-
-# def run():
-#     try:
-#         health_checker = Flask(__name__)
-#         health_checker.register_blueprint(router)
-#         health_checker.run(host="0.0.0.0")
-#     except KeyboardInterrupt:
-#         logger.info("Shutting Down...")
-#         # bg_thread.join()
-#         global running
-#         running = False
-
-
-
