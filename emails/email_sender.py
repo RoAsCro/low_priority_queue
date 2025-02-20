@@ -25,7 +25,6 @@ def send(message_to_send):
                      region_name=aws_region,
                      aws_access_key_id=consumer.access_id,
                      aws_secret_access_key=consumer.access_key)
-    print("Sending...")
     message_json = json.loads(message_to_send["Body"])
     priority = message_json['priority'].capitalize()
     ses.send_email(Source=email,
