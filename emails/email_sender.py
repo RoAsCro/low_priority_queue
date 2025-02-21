@@ -1,7 +1,6 @@
 import json
 import os
-from logging import getLogger
-
+import logging
 import boto3
 
 from botocore import exceptions
@@ -19,9 +18,8 @@ aws_region = os.getenv("AWS_REGION")
 ses = None
 exception = exceptions.ClientError
 
-logger = getLogger()
-
 def send(message_to_send):
+    logging.info("Sending...")
     global ses
     if ses is None:
         ses = boto3.client("ses",
@@ -54,6 +52,6 @@ if __name__ == "__main__":
     try:
         run().run(host="0.0.0.0")
     except KeyboardInterrupt:
-        logger.info("Shutting Down...")
+        logging.info("Shutting Down...")
         bg_thread.join()
         consumer.running = False
