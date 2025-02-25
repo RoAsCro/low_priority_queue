@@ -2,19 +2,35 @@ import threading
 import time
 
 import boto3
+import botocore
 import pytest
+from moto.batch import batch_backends
+from moto.ses.models import SESBackend
 
-import emails
-email_consumer = emails.email_sender
-consumer = email_consumer.consumer
+from emails.email_sender import EmailConsumer
 
 from moto import mock_aws
+from moto.core import DEFAULT_ACCOUNT_ID
+from moto.ses import ses_backends
+# if 'us-east-1' in batch_backends:
+#     batch_backend = batch_backends['us-east-1']
+class ConsumerStub(EmailConsumer):
+    sent_message = None
 
+    @mock_aws()
+    def __init__(self):
+        super().__init__()
+        self.email = "test@nowhere.com"
+        self.old_send = self.send
+        self.send = self.send_stub
 
-default_email_method  = email_consumer.send
+    def send_stub(self, message):
+        self.old_send(message)
+        self.sent_message = ses_backends[DEFAULT_ACCOUNT_ID]["us-east-1"].sent_messages[0]
+
+consumer = ConsumerStub()
 
 message_body = '{"priority": "high", "title": "message title", "message": "this is a message body"}'
-received_message = None
 
 @mock_aws
 def test_get_message():
@@ -57,21 +73,21 @@ def test_no_message():
 
 
 @mock_aws
-def test_process_without_teams():
+def test_process():
     sqs = prepare_aws()
     mock_sqs = sqs[0]
     queue = sqs[1]
-    consumer.send = send_to_teams_stub
     mock_sqs.send_message(QueueUrl=queue,
                         DelaySeconds=0,
                         MessageBody=message_body)
     timer_thread = threading.Thread(target=timer, args=[20]) # Ensure test doesn't run forever if it fails
     timer_thread.start()
     consumer.running = True
-    email_consumer.consumer.process()
+    consumer.process()
     consumer.running = False
-    global received_message
-    assert (received_message is not None # Message was received
+    assert (consumer.sent_message is not None  # Message was received
+            and ("high" and "message title") in consumer.sent_message.subject
+            and "this is a message body" in consumer.sent_message.body
             and "Message" not in mock_sqs.receive_message( # Message was deleted
         QueueUrl=queue,
         MaxNumberOfMessages=1,
@@ -86,21 +102,15 @@ def prepare_aws():
     queue = mock_sqs.create_queue(QueueName="team")['QueueUrl']
     consumer.sqs = mock_sqs
     consumer.queue = queue
+    consumer.ses = boto3.client("ses",
+                         region_name="us-east-1")
+    consumer.ses.verify_email_identity(EmailAddress="test@nowhere.com")
     return mock_sqs, queue
 
 def timer(seconds):
     time.sleep(seconds)
     consumer.running = False
 
-def send_to_teams_stub(message):
-    global received_message
-    received_message = message["Body"]
-    consumer.running = False
-
 @pytest.fixture(autouse=True)
 def before_each():
-    consumer.running = False
-    email_consumer.bg_thread.join()
-    consumer.send = default_email_method
-    global received_message
-    received_message = None
+    consumer.sent_message = None

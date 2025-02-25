@@ -1,57 +1,53 @@
 import json
-import os
 import logging
-import boto3
+import os
 
+import boto3
 from botocore import exceptions
 from dotenv import load_dotenv
-from flask import Flask
+from sqs_consumer.abstract_consumer import AbstractConsumer
 
-import abstract_comsumer
-
-consumer = abstract_comsumer
 load_dotenv()
-
-
-email = os.getenv("EMAIL")
-aws_region = os.getenv("AWS_REGION")
-ses = None
 exception = exceptions.ClientError
-
-def send(message_to_send):
-    logging.info("Sending...")
-    global ses
-    if ses is None:
-        ses = boto3.client("ses",
-                     region_name=aws_region,
-                     aws_access_key_id=consumer.access_id,
-                     aws_secret_access_key=consumer.access_key)
-    message_json = json.loads(message_to_send["Body"])
-    priority = message_json['priority'].capitalize()
-    ses.send_email(Source=email,
-                   Destination={"ToAddresses": [email]},
-                   Message={"Subject":
-                                {"Data": f"{priority} priority - {message_json['title']}"},
-                            "Body":
-                                {"Text":
-                                     {"Data": f"{message_json['message']}\n"
-                                              f"(Message sent automatically via bug queue)"}
-                                 }
-                            })
+class EmailConsumer(AbstractConsumer):
+    def __init__(self):
+        super().__init__()
+        self.exception = IndexError
+        self.email = os.getenv("EMAIL")
+        self.ses = None
 
 
-consumer.send = send
-consumer.exception = exception
-bg_thread = consumer.background_thread()
-def run():
-    health_checker = Flask(__name__)
-    health_checker.register_blueprint(consumer.router)
-    return health_checker
+
+    def send(self, message_to_send):
+        logging.info("Sending...")
+        if self.ses is None:
+            self.ses = boto3.client("ses",
+                         region_name=self.aws_region,
+                         aws_access_key_id=consumer.access_id,
+                         aws_secret_access_key=consumer.access_key)
+        message_json = json.loads(message_to_send["Body"])
+        priority = message_json['priority'].capitalize()
+        print("sending")
+
+        self.ses.send_email(Source=self.email,
+                       Destination={"ToAddresses": [self.email]},
+                       Message={"Subject":
+                                    {"Data": f"{priority} priority - {message_json['title']}"},
+                                "Body":
+                                    {"Text":
+                                         {"Data": f"{message_json['message']}\n"
+                                                  f"(Message sent automatically via bug queue)"}
+                                     }
+                                })
+
+
+consumer = EmailConsumer()
+run = consumer.run
 
 if __name__ == "__main__":
     try:
         run().run(host="0.0.0.0")
     except KeyboardInterrupt:
         logging.info("Shutting Down...")
-        bg_thread.join()
+        consumer.bg_thread.join()
         consumer.running = False
