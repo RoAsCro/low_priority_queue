@@ -19,7 +19,6 @@ class EmailConsumer(AbstractConsumer):
 
 
     def send(self, message_to_send):
-        logging.info("Sending...")
         if self.ses is None:
             self.ses = boto3.client("ses",
                          region_name=self.aws_region,
@@ -27,7 +26,6 @@ class EmailConsumer(AbstractConsumer):
                          aws_secret_access_key=consumer.access_key)
         message_json = json.loads(message_to_send["Body"])
         priority = message_json['priority'].capitalize()
-        print("sending")
 
         self.ses.send_email(Source=self.email,
                        Destination={"ToAddresses": [self.email]},
@@ -48,6 +46,6 @@ if __name__ == "__main__":
     try:
         run().run(host="0.0.0.0")
     except KeyboardInterrupt:
-        logging.info("Shutting Down...")
+        consumer.info_logger.info("Shutting Down...")
         consumer.bg_thread.join()
         consumer.running = False
