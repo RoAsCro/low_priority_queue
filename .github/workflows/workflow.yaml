@@ -1,0 +1,88 @@
+name: Run Tests
+on:
+  push:
+    branches:
+      - main
+jobs:
+  Tests:
+    name: Run Tests
+    runs-on: windows-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+
+      - name: pip
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install moto
+          pip install -r ./emails/requirements.txt
+
+      - name: Run pytest
+        run: |
+          pip install pytest pytest-cov
+          pytest test --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+  Trivy:
+    name: Trivy
+    needs: [Tests]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build an image from Dockerfile
+        run: docker build . -t trivy-image
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'trivy-image'
+          format: 'table'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+  SonarQube:
+    name: SonarQube
+    needs: [Tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Disabling shallow clones is recommended for improving the relevancy of reporting
+          fetch-depth: 0
+      - name: SonarQube Scan
+        uses: sonarsource/sonarcloud-github-action@v4.0.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  Push:
+    name: Push to ECR
+    needs: [Tests, SonarQube, Trivy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.ECR_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.ECR_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR Public
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry-type: public
+
+      - name: Build, tag, and push the image to Amazon ECR
+        id: build-image
+        env:
+          IMAGE_TAG: queue_3
+        run: |
+          docker build -t ${{ secrets.REPO_URL }}:$IMAGE_TAG .
+          docker push ${{ secrets.REPO_URL }}:$IMAGE_TAG
