@@ -11,7 +11,7 @@ load_dotenv()
 exception = exceptions.ClientError
 class EmailConsumer(AbstractConsumer):
     def __init__(self):
-        super().__init__()
+        super().__init__(queue_var_name="LOW_PRIORITY_QUEUE")
         self.exception = IndexError
         self.email = os.getenv("EMAIL")
         self.ses = None
