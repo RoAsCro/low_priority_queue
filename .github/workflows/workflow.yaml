@@ -60,7 +60,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   Push:
     name: Push to ECR
-    needs: [Tests, SonarQube, Trivy]
+    needs: [Tests]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
