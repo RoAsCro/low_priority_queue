@@ -14,7 +14,12 @@ class EmailConsumer(AbstractConsumer):
         super().__init__()
         self.exception = IndexError
         self.email = os.getenv("EMAIL")
-        self.ses = None
+        if self.aws_region is None:
+            self.aws_region = "us-east-1"
+        self.ses = boto3.client("ses",
+                         region_name=self.aws_region,
+                         aws_access_key_id=self.access_id,
+                         aws_secret_access_key=self.access_key)
 
 
 
